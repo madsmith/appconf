@@ -2,7 +2,7 @@
 
 Typed application config with YAML files and argparse override support, powered by [OmegaConf](https://github.com/omry/omegaconf).
 
-Declare config properties as `Bind` descriptors on an `AppConfig` subclass.  Application can pass around a typed config file that resolves it's values to a sequence of providers such as argparse or a YAML backing.
+Declare config properties as `Bind` descriptors on an `AppConfig` subclass.  Application can pass around a typed config object that resolves its values from a sequence of providers such as argparse or a YAML backing store.
 
 ## Install
 
@@ -35,24 +35,6 @@ class ServerConfig(AppConfig):
 And use it in your application:
 
 ```python
-parser = argparse.ArgumentParser()
-parser.add_argument("--host")
-parser.add_argument("--port", type=int)
-parser.add_argument("--debug", action="store_true", default=None)
-
-args = parser.parse_args()
-cfg = ServerConfig("config.yaml", args)
-
-print(cfg.host)   # "localhost"  (from YAML)
-print(cfg.port)   # 8080         (from YAML, converted to int)
-print(cfg.debug)  # False        (from YAML)
-```
-
-When using defaults in argparse, these can shadow YAML resolution.  So it's recommended to call
-`ArgParseWrapper.wrap()` on your parser to wrap defaults before parsing.  This lets
-AppConfig distinguish explicit arguments from defaults during resolution.
-
-```python
 from appconf.providers.argparse import ArgParseWrapper
 
 parser = argparse.ArgumentParser()
@@ -60,31 +42,33 @@ parser.add_argument("--host", default="127.0.0.1")
 parser.add_argument("--port", default=8080)
 parser.add_argument("--debug", action="store_true")
 
+# Important: call before parse_args() to annotate defaults
 ArgParseWrapper.wrap(parser)
 args = parser.parse_args()
+
 cfg = ServerConfig("config.yaml", args)
 
 print(cfg.host)   # "localhost"  (from YAML)
 print(cfg.port)   # 8080         (from YAML, converted to int)
 print(cfg.debug)  # False        (from YAML)
 ```
-Command-line arguments take priority over the config file:
 
-```
-$ python app.py --port 9090
-# cfg.port == 9090  (argparse wins)
-```
+`ArgParseWrapper.wrap()` annotates defaults such that resolution of properties
+can fall through to other providers. If not called, then argparse would resolve
+every property that has a default specified.
 
-## Resolution order
+## Resolution Order
 
-For each `Bind` property, values resolve in this order:
+Parameter resolution occurs in the following order:
 
-1. Explicit assignment (`cfg.port = 9090`)
-2. argparse argument (if provided and not `None`)
-3. YAML config file (via dot-path lookup)
-4. `Bind` default
+1. Command-line arguments parsed by argparse
+2. YAML config properties
+3. Default values
+    1. `bind_defaults` passed to AppConfig constructor
+    2. argparse defaults (wrapped by `ArgParseWrapper`)
+    3. `Bind` descriptor defaults
 
-## Writing and saving
+## Writing and Saving
 
 ```python
 cfg.port = 9090           # writes to YAML backing store + local cache
