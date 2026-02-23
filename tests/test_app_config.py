@@ -3,8 +3,7 @@ import pytest
 from pathlib import Path
 from omegaconf import OmegaConf
 
-from appconf import AppConfig, Bind, OmegaConfig
-from appconf.app_config import DefaultsExtractor
+from appconf import AppConfig, Bind
 
 
 # --- Bind descriptor ---
@@ -33,10 +32,9 @@ def test_bind_class_access_returns_descriptor():
     assert isinstance(MyConfig.port, Bind)
 
 
-def test_bind_set_goes_through_omega_setattr(tmp_path):
-    """Assignment on an AppConfig instance goes through OmegaConfig.__setattr__
-    (which calls set()) rather than Bind.__set__, because __setattr__ takes
-    priority over data descriptors on the instance."""
+def test_bind_set_writes_through_to_config_path(tmp_path):
+    """Assignment on a Bind property writes through to the backing store
+    at the bound config_path."""
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
@@ -45,30 +43,8 @@ def test_bind_set_goes_through_omega_setattr(tmp_path):
 
     args = argparse.Namespace()
     cfg = MyConfig(config_file, args)
-    # This goes through OmegaConfig.__setattr__ → set("port", 9090)
     cfg.port = 9090
-    assert cfg.get("port") == 9090
-
-
-# --- DefaultsExtractor ---
-
-def test_defaults_extractor():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--host", default="localhost")
-    parser.add_argument("--verbose", action="store_true")
-
-    extractor = DefaultsExtractor(parser)
-    defaults = extractor.extract()
-
-    assert defaults["port"] == 8080
-    assert defaults["host"] == "localhost"
-    assert defaults["verbose"] is False
-
-    # After extraction, parser defaults should be suppressed
-    args = parser.parse_args([])
-    assert not hasattr(args, "port")
-    assert not hasattr(args, "host")
+    assert cfg.get("server.port") == 9090
 
 
 # --- AppConfig resolution order ---
@@ -176,9 +152,9 @@ def test_resolve_append_merges(tmp_path):
     assert cfg.items == ["from_arg", "from_config"]
 
 
-# --- OmegaConfig base access still works ---
+# --- Backing store access ---
 
-def test_appconfig_inherits_omega_get(tmp_path):
+def test_appconfig_delegates_get_to_store(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n  port: 8080\n")
 

@@ -1,9 +1,9 @@
 """appconf - Typed application config with OmegaConf and argparse binding."""
 
-from .omega_config import OmegaConfig, RawOmegaConfConfig
-from .loader import OmegaConfigLoader
+from .omegaconf import OmegaConfig, RawOmegaConfConfig, OmegaConfigLoader
 from .bind import Bind
 from .app_config import AppConfig
+from .providers import ConfigProvider, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider
 
 __version__ = "0.1.0"
 
@@ -13,4 +13,8 @@ __all__ = [
     "RawOmegaConfConfig",
     "AppConfig",
     "Bind",
+    "ConfigProvider",
+    "ArgNamespaceProvider",
+    "ArgParseProvider",
+    "OmegaConfProvider",
 ]

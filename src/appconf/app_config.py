@@ -5,36 +5,16 @@ from typing import Any
 from omegaconf import ListConfig
 
 from .bind import Bind
-from .omega_config import OmegaConfig
-from .loader import OmegaConfigLoader
+from .providers.argparse import ArgNamespaceProvider
+from .providers.omegaconf import OmegaConfProvider
 
 
-class DefaultsExtractor:
-    """Extracts and suppresses argparse defaults.
+class AppConfig:
+    """Config backed by providers with Bind descriptor support.
 
-    This is used to separate argparse defaults from explicitly-provided
-    arguments, allowing the resolution order in Bind to work correctly.
+    Providers are consulted in priority order during Bind resolution.
+    The OmegaConf provider serves as the backing store for get/set/save.
     """
-
-    def __init__(self, parser: argparse.ArgumentParser):
-        self._parser = parser
-
-    def extract(self) -> dict[str, Any]:
-        defaults = {}
-
-        for action in self._parser._actions:
-            if (
-                action.dest != argparse.SUPPRESS
-                and action.default is not argparse.SUPPRESS
-            ):
-                defaults[action.dest] = action.default
-                action.default = argparse.SUPPRESS
-
-        return defaults
-
-
-class AppConfig(OmegaConfig):
-    """Config that merges argparse arguments with YAML config via Bind descriptors."""
 
     def __init__(
         self,
@@ -42,45 +22,58 @@ class AppConfig(OmegaConfig):
         args: argparse.Namespace | None = None,
         arg_defaults: dict[str, Any] | None = None,
     ):
-        super().__init__(OmegaConfigLoader.load_raw(config_path))
+        self._store = OmegaConfProvider(config_path)
+        self._providers = []
 
-        self._args = args
-        self._arg_defaults = arg_defaults
+        if args is not None:
+            self._providers.append(ArgNamespaceProvider(args, arg_defaults))
+
+        self._providers.append(self._store)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._store.get(key, default=default)
+
+    def set(self, key: str, value: Any) -> None:
+        self._store.set(key, value)
+
+    def save(self, path: Path | str | None = None) -> None:
+        self._store.save(path)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._store
 
     def _resolve_bind(self, bind: Bind) -> Any:
         resolved = False
         r_value = None
 
-        if self._args is not None:
-            arg_key = bind.arg_key
-            if arg_key and hasattr(self._args, arg_key):
-                value = getattr(self._args, arg_key)
-                if value is not None:
-                    r_value = value
-                    resolved = True and bind.action != "append"
-
-        value = self.get(bind.config_path)
-        if not resolved and value is not None:
-            if (
-                r_value is not None
-                and bind.action == "append"
-                and isinstance(r_value, list)
-            ):
-                r_value.extend(value)
+        for provider in self._providers:
+            if isinstance(provider, ArgNamespaceProvider):
+                key = bind.arg_key
+                if key is None:
+                    continue
             else:
-                r_value = value
-            resolved = True
+                key = bind.config_path
 
-        if bind.default:
-            if not resolved and bind.default and not r_value:
-                r_value = bind.default
-                resolved = True
+            value = provider.get(key)
+            if value is not None:
+                if r_value is None:
+                    r_value = value
+                    resolved = bind.action != "append"
+                elif (
+                    bind.action == "append"
+                    and isinstance(r_value, list)
+                ):
+                    if isinstance(value, (list, ListConfig)):
+                        r_value.extend(value)
+                    else:
+                        r_value.append(value)
+                    resolved = True
+                else:
+                    # Already have a value and not append — skip
+                    continue
 
-        if self._arg_defaults and bind.arg_key is not None:
-            value = self._arg_defaults.get(bind.arg_key)
-            if not resolved and value and not r_value:
-                r_value = value
-                resolved = True
+        if not resolved and r_value is None and bind.default is not None:
+            r_value = bind.default
 
         if bind.converter is not None and r_value is not None:
             if isinstance(r_value, (list, ListConfig)):
@@ -89,3 +82,30 @@ class AppConfig(OmegaConfig):
                 r_value = bind.converter(r_value)
 
         return r_value
+
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return self.get(name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_"):
+            super().__setattr__(name, value)
+            return
+
+        # Check for Bind descriptor on the class — delegate to its __set__
+        for cls in type(self).__mro__:
+            if name in cls.__dict__:
+                attr = cls.__dict__[name]
+                if isinstance(attr, Bind):
+                    attr.__set__(self, value)
+                    return
+                break
+
+        self.set(name, value)
+
+    def __str__(self) -> str:
+        return str(self._store)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._store!r})"

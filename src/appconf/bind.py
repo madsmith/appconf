@@ -12,10 +12,9 @@ class Bind(Generic[T]):
     responsibility.
 
     Resolution order when accessed on an AppConfig instance:
-    1. Argparse value (if provided and not None)
-    2. Config file value (via config_path)
+    1. Higher-priority providers (e.g. argparse)
+    2. Backing store provider (e.g. OmegaConf/YAML)
     3. Bind default
-    4. Argparse parser default (from arg_defaults)
     """
 
     def __init__(
@@ -50,7 +49,4 @@ class Bind(Generic[T]):
         return instance._resolve_bind(self)
 
     def __set__(self, instance, value) -> None:
-        raise AttributeError(
-            f"'{self.property_name}' is read-only; "
-            f"modify '{self.config_path}' via config.set(...) instead"
-        )
+        instance.set(self.config_path, value)
