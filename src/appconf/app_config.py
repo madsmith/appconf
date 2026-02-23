@@ -100,8 +100,26 @@ class AppConfig:
 
         self.set(name, value)
 
+    def _resolved_binds(self) -> dict[str, Any]:
+        binds: dict[str, Bind] = {}
+        for klass in reversed(type(self).__mro__):
+            for name, attr in klass.__dict__.items():
+                if isinstance(attr, Bind):
+                    binds[name] = attr
+        return {name: self._resolve_bind(bind) for name, bind in binds.items()}
+
     def __str__(self) -> str:
-        return str(self._store)
+        return str(self._resolved_binds())
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self._store!r})"
+        parts = [f"{k}={v!r}" for k, v in self._resolved_binds().items()]
+
+        providers = []
+        for p in self._providers:
+            name = type(p).__name__
+            if isinstance(p, BackingStore):
+                name += "*"
+            providers.append(name)
+
+        parts.append(f"providers=[{', '.join(providers)}]")
+        return f"{type(self).__name__}({', '.join(parts)})"
