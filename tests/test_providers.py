@@ -1,13 +1,16 @@
 import argparse
-from pathlib import Path
 
 from appconf import (
-    AppConfig, Bind, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider,
+    AppConfig,
+    ArgNamespaceProvider,
+    ArgParseProvider,
+    Bind,
+    OmegaConfProvider,
 )
 from appconf.providers.base import DefaultedValue
 
-
 # --- ArgNamespaceProvider ---
+
 
 def test_arg_namespace_provider_get_from_args():
     args = argparse.Namespace(port=9090)
@@ -43,6 +46,7 @@ def test_arg_namespace_provider_missing_key_returns_none():
 
 # --- ArgParseProvider ---
 
+
 def test_argparse_provider_extracts_defaults_and_parses(monkeypatch):
     monkeypatch.setattr("sys.argv", ["prog", "--port", "9090"])
 
@@ -66,6 +70,7 @@ def test_argparse_provider_is_arg_namespace_provider():
 
 
 # --- OmegaConfProvider ---
+
 
 def test_omegaconf_provider_get(tmp_path):
     config_file = tmp_path / "config.yaml"
@@ -126,6 +131,7 @@ def test_omegaconf_provider_save_to_different_path(tmp_path):
 
 # --- AppConfig with no args (config-only) ---
 
+
 def test_appconfig_no_args(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
@@ -138,6 +144,7 @@ def test_appconfig_no_args(tmp_path):
 
 
 # --- Bind write-through ---
+
 
 def test_bind_write_through(tmp_path):
     config_file = tmp_path / "config.yaml"
@@ -152,6 +159,7 @@ def test_bind_write_through(tmp_path):
 
 
 # --- Save via AppConfig ---
+
 
 def test_appconfig_save(tmp_path):
     config_file = tmp_path / "config.yaml"
