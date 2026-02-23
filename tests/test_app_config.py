@@ -2,8 +2,8 @@ import argparse
 
 from appconf import AppConfig, Bind
 
-
 # --- Bind descriptor ---
+
 
 def test_bind_set_name():
     class MyConfig(AppConfig):
@@ -44,7 +44,23 @@ def test_bind_set_writes_through_to_config_path(tmp_path):
     assert cfg.port == 9090
 
 
+def test_bind_set_cache_overrides_arg_provider(tmp_path):
+    """After an explicit set, the cached value wins over a higher-priority provider."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  port: 8080\n")
+
+    class MyConfig(AppConfig):
+        port = Bind("server.port")
+
+    args = argparse.Namespace(port=5000)
+    cfg = MyConfig(config_file, args)
+    assert cfg.port == 5000  # args wins before set
+    cfg.port = 9090
+    assert cfg.port == 9090  # set-cache wins after set
+
+
 # --- AppConfig resolution order ---
+
 
 def test_resolve_argparse_wins(tmp_path):
     config_file = tmp_path / "config.yaml"
@@ -108,6 +124,7 @@ def test_resolve_none_when_nothing_matches(tmp_path):
 
 # --- Converter ---
 
+
 def test_resolve_with_converter(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: '8080'\n")
@@ -135,6 +152,7 @@ def test_resolve_converter_with_list(tmp_path):
 
 # --- Append action ---
 
+
 def test_resolve_append_merges(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("extra:\n  - from_config\n")
@@ -149,3 +167,19 @@ def test_resolve_append_merges(tmp_path):
     assert cfg.items == ["from_arg", "from_config"]
 
 
+# --- Non-Bind attribute storage ---
+
+
+def test_non_bind_attr_is_normal_python_attr(tmp_path):
+    """Setting a non-Bind attribute stores it as a normal instance attribute,
+    not in the backing store."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  port: 8080\n")
+
+    class MyConfig(AppConfig):
+        port = Bind("server.port")
+
+    cfg = MyConfig(config_file)
+    cfg.local_value = 42
+    assert cfg.local_value == 42  # type: ignore[assign]
+    assert "local_value" in cfg.__dict__

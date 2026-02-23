@@ -85,11 +85,16 @@ class AppConfig:
         return r_value
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name.startswith("_"):
-            super().__setattr__(name, value)
-            return
-
-        # Check for Bind descriptor on the class — delegate to its __set__
+        # Because we override __setattr__, Python no longer auto-dispatches to
+        # data descriptors (classes with __get__/__set__) like Bind.  We need to
+        # manually walk the MRO (Method Resolution Order — the chain of classes
+        # Python searches: MyConfig → AppConfig → object) to find if this name
+        # is a Bind descriptor, and if so, call its __set__ which writes through
+        # to the backing store via config_path.
+        #
+        # The `break` after a non-Bind match stops the search: if something
+        # named e.g. 'port' exists on a parent class but isn't a Bind, we stop
+        # and fall through to normal attribute storage.
         for cls in type(self).__mro__:
             if name in cls.__dict__:
                 attr = cls.__dict__[name]
@@ -98,7 +103,8 @@ class AppConfig:
                     return
                 break
 
-        self.set(name, value)
+        # Not a Bind — normal Python attribute storage.
+        super().__setattr__(name, value)
 
     def _resolved_binds(self) -> dict[str, Any]:
         binds: dict[str, Bind] = {}
