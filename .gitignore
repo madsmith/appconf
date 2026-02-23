@@ -1,0 +1,13 @@
+.venv
+.venv*
+*.egg-info/
+*.dist-info/
+build/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+.pytest_cache/
+
+# Dev Resources
+references/
