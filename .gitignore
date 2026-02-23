@@ -8,6 +8,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .pytest_cache/
+uv.lock
 
 # Dev Resources
 references/
