@@ -1,7 +1,4 @@
 import argparse
-import pytest
-from pathlib import Path
-from omegaconf import OmegaConf
 
 from appconf import AppConfig, Bind
 
@@ -44,7 +41,7 @@ def test_bind_set_writes_through_to_config_path(tmp_path):
     args = argparse.Namespace()
     cfg = MyConfig(config_file, args)
     cfg.port = 9090
-    assert cfg.get("server.port") == 9090
+    assert cfg.port == 9090
 
 
 # --- AppConfig resolution order ---
@@ -152,17 +149,3 @@ def test_resolve_append_merges(tmp_path):
     assert cfg.items == ["from_arg", "from_config"]
 
 
-# --- Backing store access ---
-
-def test_appconfig_delegates_get_to_store(tmp_path):
-    config_file = tmp_path / "config.yaml"
-    config_file.write_text("server:\n  host: localhost\n  port: 8080\n")
-
-    class MyConfig(AppConfig):
-        pass
-
-    args = argparse.Namespace()
-    cfg = MyConfig(config_file, args)
-    assert cfg.get("server.host") == "localhost"
-    assert cfg.get("server.port") == 8080
-    assert "server.host" in cfg

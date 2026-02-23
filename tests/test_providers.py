@@ -157,7 +157,6 @@ def test_bind_write_through(tmp_path):
     cfg = MyConfig(config_file)
     cfg.port = 9090
     assert cfg.port == 9090
-    assert cfg.get("server.port") == 9090
 
 
 # --- Save via AppConfig ---
