@@ -1,6 +1,6 @@
 [project]
 name = "appconf"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Typed application config with OmegaConf and argparse binding"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -24,6 +24,9 @@ dependencies = [
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "appconf.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

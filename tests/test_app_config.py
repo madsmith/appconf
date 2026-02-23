@@ -1,6 +1,7 @@
 import argparse
 
 from appconf import AppConfig, Bind
+from appconf.providers.base import DefaultedValue
 
 # --- Bind descriptor ---
 
@@ -98,16 +99,41 @@ def test_resolve_bind_default(tmp_path):
     assert cfg.port == 3000
 
 
-def test_resolve_arg_defaults_fallback(tmp_path):
+def test_resolve_defaulted_value_fallback(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n")
 
     class MyConfig(AppConfig):
         port = Bind("server.port")
 
-    args = argparse.Namespace(port=None)
-    cfg = MyConfig(config_file, args, arg_defaults={"port": 5000})
+    args = argparse.Namespace(port=DefaultedValue(5000))
+    cfg = MyConfig(config_file, args)
     assert cfg.port == 5000
+
+
+def test_resolve_bind_defaults_fallback(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  host: localhost\n")
+
+    class MyConfig(AppConfig):
+        port = Bind("server.port")
+
+    args = argparse.Namespace()
+    cfg = MyConfig(config_file, args, bind_defaults={"port": 5000})
+    assert cfg.port == 5000
+
+
+def test_resolve_bind_defaults_below_yaml(tmp_path):
+    """YAML config wins over bind_defaults."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  port: 8080\n")
+
+    class MyConfig(AppConfig):
+        port = Bind("server.port")
+
+    args = argparse.Namespace()
+    cfg = MyConfig(config_file, args, bind_defaults={"port": 5000})
+    assert cfg.port == 8080
 
 
 def test_resolve_none_when_nothing_matches(tmp_path):

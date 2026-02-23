@@ -1,69 +1,55 @@
 import argparse
 from typing import Any
 
-from .base import ConfigProvider
+from .base import ConfigProvider, DefaultedValue
+from ..bind import Bind
 
 
-class _DefaultsExtractor:
-    """Extracts and suppresses argparse defaults.
+class ArgParseWrapper:
+    """Wraps an ArgumentParser's defaults with DefaultedValue markers
+    so that AppConfig can distinguish explicit arguments from defaults."""
 
-    This is used internally to separate argparse defaults from explicitly-provided
-    arguments, allowing the resolution order in Bind to work correctly.
-    """
+    @staticmethod
+    def wrap(parser: argparse.ArgumentParser) -> None:
+        """Wrap all argparse defaults with DefaultedValue markers.
 
-    def __init__(self, parser: argparse.ArgumentParser):
-        self._parser = parser
-
-    def extract(self) -> dict[str, Any]:
-        defaults = {}
-
-        for action in self._parser._actions:
+        Call this before parse_args(). After parsing, arguments that still
+        hold a DefaultedValue were not explicitly provided by the user.
+        """
+        for action in parser._actions:
             if (
                 action.dest != argparse.SUPPRESS
                 and action.default is not argparse.SUPPRESS
             ):
-                defaults[action.dest] = action.default
-                action.default = argparse.SUPPRESS
-
-        return defaults
+                action.default = DefaultedValue(action.default)
 
 
 class ArgNamespaceProvider(ConfigProvider):
-    """Config provider that reads from a pre-parsed argparse Namespace and defaults dict."""
+    """Config provider that reads from a pre-parsed argparse Namespace.
 
-    def __init__(
-        self,
-        args: argparse.Namespace,
-        defaults: dict[str, Any] | None = None,
-    ):
+    Returns values as-is, including DefaultedValue wrappers. Resolution
+    logic in AppConfig handles unwrapping.
+    """
+
+    def __init__(self, args: argparse.Namespace):
         self._args = args
-        self._defaults = defaults or {}
+
+    def bind_key(self, bind: Bind) -> str | None:
+        return bind.arg_key
 
     def get(self, key: str) -> Any:
-        # Explicit arg value takes priority
         if hasattr(self._args, key):
             value = getattr(self._args, key)
             if value is not None:
                 return value
 
-        # Fall back to defaults
-        value = self._defaults.get(key)
-        if value is not None:
-            return value
-
         return None
 
 
 class ArgParseProvider(ArgNamespaceProvider):
-    """Config provider that takes an ArgumentParser, extracts defaults, parses args,
-    and merges in any additional defaults."""
+    """Config provider that takes an ArgumentParser, marks defaults, parses args."""
 
-    def __init__(
-        self,
-        parser: argparse.ArgumentParser,
-        defaults: dict[str, Any] | None = None,
-    ):
-        extracted = _DefaultsExtractor(parser).extract()
-        merged = extracted | (defaults or {})
+    def __init__(self, parser: argparse.ArgumentParser):
+        ArgParseWrapper.wrap(parser)
         args = parser.parse_args()
-        super().__init__(args, merged)
+        super().__init__(args)

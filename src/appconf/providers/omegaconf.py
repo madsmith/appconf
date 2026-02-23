@@ -4,6 +4,7 @@ from typing import Any
 from omegaconf import OmegaConf
 
 from .base import ConfigProvider
+from ..bind import Bind
 from ..omegaconf import OmegaConfigLoader, OmegaConfig
 
 
@@ -13,6 +14,9 @@ class OmegaConfProvider(ConfigProvider):
     def __init__(self, config_path: Path | str):
         self._config = OmegaConfig(OmegaConfigLoader.load_raw(config_path))
         self._config_path = Path(config_path)
+
+    def bind_key(self, bind: Bind) -> str | None:
+        return bind.config_path
 
     def get(self, key: str, default: Any = None) -> Any:
         return self._config.get(key, default=default)

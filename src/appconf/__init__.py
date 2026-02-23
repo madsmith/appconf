@@ -3,9 +3,9 @@
 from .omegaconf import OmegaConfig, RawOmegaConfConfig, OmegaConfigLoader
 from .bind import Bind
 from .app_config import AppConfig
-from .providers import ConfigProvider, BackingStore, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider
+from .providers import ConfigProvider, BackingStore, DefaultedValue, ArgParseWrapper, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 __all__ = [
     "OmegaConfig",
@@ -15,6 +15,8 @@ __all__ = [
     "Bind",
     "ConfigProvider",
     "BackingStore",
+    "DefaultedValue",
+    "ArgParseWrapper",
     "ArgNamespaceProvider",
     "ArgParseProvider",
     "OmegaConfProvider",

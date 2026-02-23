@@ -5,8 +5,8 @@ from typing import Any
 from omegaconf import ListConfig
 
 from .bind import Bind
-from .providers.base import BackingStore
 from .providers.argparse import ArgNamespaceProvider
+from .providers.base import BackingStore, DefaultedValue
 from .providers.omegaconf import OmegaConfProvider
 
 
@@ -21,12 +21,13 @@ class AppConfig:
         self,
         config_path: Path | str,
         args: argparse.Namespace | None = None,
-        arg_defaults: dict[str, Any] | None = None,
+        bind_defaults: dict[str, Any] | None = None,
     ):
         self._providers = []
+        self._bind_defaults = bind_defaults or {}
 
         if args is not None:
-            self._providers.append(ArgNamespaceProvider(args, arg_defaults))
+            self._providers.append(ArgNamespaceProvider(args))
 
         self._providers.append(OmegaConfProvider(config_path))
 
@@ -44,45 +45,60 @@ class AppConfig:
         self._store.save(path)
 
     def _resolve_bind(self, bind: Bind) -> Any:
-        resolved = False
-        r_value = None
+        # Resolution order:
+        #   1. Set-cache (handled by Bind.__get__ before we get here)
+        #   2. Explicit arg value
+        #   3. YAML config
+        #   4. bind_defaults (by property name)
+        #   5. Bind default
+        #   6. DefaultedValue (unwrapped)
+        #   7. None
+        result = None
+        defaulted = None
 
         for provider in self._providers:
-            if isinstance(provider, ArgNamespaceProvider):
-                key = bind.arg_key
-                if key is None:
-                    continue
-            else:
-                key = bind.config_path
+            key = provider.bind_key(bind)
+            if key is None:
+                continue
 
             value = provider.get(key)
-            if value is not None:
-                if r_value is None:
-                    r_value = value
-                    resolved = bind.action != "append"
-                elif (
-                    bind.action == "append"
-                    and isinstance(r_value, list)
-                ):
-                    if isinstance(value, (list, ListConfig)):
-                        r_value.extend(value)
-                    else:
-                        r_value.append(value)
-                    resolved = True
+            if value is None:
+                continue
+
+            if isinstance(value, DefaultedValue):
+                defaulted = defaulted or value.value
+                continue
+
+            if result is None:
+                result = value
+            elif bind.action == "append" and isinstance(result, list):
+                if isinstance(value, (list, ListConfig)):
+                    result.extend(value)
                 else:
-                    # Already have a value and not append — skip
-                    continue
+                    result.append(value)
 
-        if not resolved and r_value is None and bind.default is not None:
-            r_value = bind.default
+        if result is None:
+            result = (
+                self._bind_defaults.get(bind.property_name)
+                if bind.property_name is not None
+                else None
+            )
 
-        if bind.converter is not None and r_value is not None:
-            if isinstance(r_value, (list, ListConfig)):
-                r_value = [bind.converter(v) for v in r_value]
-            else:
-                r_value = bind.converter(r_value)
+        if result is None:
+            if bind.default is not None:
+                result = bind.default
+            elif defaulted is not None:
+                result = defaulted
 
-        return r_value
+        return self._convert(result, bind)
+
+    @staticmethod
+    def _convert(value: Any, bind: Bind) -> Any:
+        if bind.converter is not None and value is not None:
+            if isinstance(value, (list, ListConfig)):
+                return [bind.converter(v) for v in value]
+            return bind.converter(value)
+        return value
 
     def __setattr__(self, name: str, value: Any) -> None:
         # Because we override __setattr__, Python no longer auto-dispatches to

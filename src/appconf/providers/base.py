@@ -2,6 +2,25 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 
+class DefaultedValue:
+    """Wrapper that marks a default value so it can be distinguished
+    from an explicitly-provided value during resolution.
+
+    Renders as the original value for argparse help strings (%(default)s).
+    AppConfig._resolve_bind treats DefaultedValue as unresolved — it keeps
+    consulting providers and only unwraps it as a last resort.
+    """
+
+    def __init__(self, value: Any):
+        self.value = value
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return repr(self.value)
+
+
 @runtime_checkable
 class ConfigProvider(Protocol):
     """Protocol for config providers. Providers supply values by key."""

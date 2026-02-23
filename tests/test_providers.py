@@ -4,6 +4,7 @@ from pathlib import Path
 from appconf import (
     AppConfig, Bind, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider,
 )
+from appconf.providers.base import DefaultedValue
 
 
 # --- ArgNamespaceProvider ---
@@ -14,22 +15,24 @@ def test_arg_namespace_provider_get_from_args():
     assert provider.get("port") == 9090
 
 
-def test_arg_namespace_provider_get_from_defaults():
-    args = argparse.Namespace()
-    provider = ArgNamespaceProvider(args, defaults={"port": 8080})
-    assert provider.get("port") == 8080
+def test_arg_namespace_provider_defaulted_value_passes_through():
+    args = argparse.Namespace(port=DefaultedValue(8080))
+    provider = ArgNamespaceProvider(args)
+    result = provider.get("port")
+    assert isinstance(result, DefaultedValue)
+    assert result.value == 8080
 
 
-def test_arg_namespace_provider_args_wins_over_defaults():
+def test_arg_namespace_provider_explicit_wins_over_defaulted():
     args = argparse.Namespace(port=9090)
-    provider = ArgNamespaceProvider(args, defaults={"port": 8080})
+    provider = ArgNamespaceProvider(args)
     assert provider.get("port") == 9090
 
 
-def test_arg_namespace_provider_none_arg_falls_to_default():
+def test_arg_namespace_provider_none_returns_none():
     args = argparse.Namespace(port=None)
-    provider = ArgNamespaceProvider(args, defaults={"port": 8080})
-    assert provider.get("port") == 8080
+    provider = ArgNamespaceProvider(args)
+    assert provider.get("port") is None
 
 
 def test_arg_namespace_provider_missing_key_returns_none():
@@ -51,21 +54,10 @@ def test_argparse_provider_extracts_defaults_and_parses(monkeypatch):
 
     # Explicit arg
     assert provider.get("port") == 9090
-    # Extracted default (not provided on CLI)
-    assert provider.get("host") == "localhost"
-
-
-def test_argparse_provider_merges_extra_defaults(monkeypatch):
-    monkeypatch.setattr("sys.argv", ["prog"])
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8080)
-
-    provider = ArgParseProvider(parser, defaults={"port": 5000, "extra": "val"})
-
-    # Extra defaults override extracted parser defaults
-    assert provider.get("port") == 5000
-    assert provider.get("extra") == "val"
+    # Default (not provided on CLI) — returned as DefaultedValue
+    result = provider.get("host")
+    assert isinstance(result, DefaultedValue)
+    assert result.value == "localhost"
 
 
 def test_argparse_provider_is_arg_namespace_provider():
