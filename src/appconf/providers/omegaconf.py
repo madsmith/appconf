@@ -12,10 +12,10 @@ class OmegaConfProvider(ConfigProvider):
     """Config provider backed by OmegaConf. Supports get, set, and save."""
 
     def __init__(self, config_path: Path | str):
-        self._config = OmegaConfig(OmegaConfigLoader.load_raw(config_path))
-        self._config_path = Path(config_path)
+        self._config: OmegaConfig = OmegaConfig(OmegaConfigLoader.load_raw(config_path))
+        self._config_path: Path = Path(config_path)
 
-    def bind_key(self, bind: Bind) -> str | None:
+    def bind_key(self, bind: Bind[Any]) -> str | None:
         return bind.config_path
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -26,7 +26,7 @@ class OmegaConfProvider(ConfigProvider):
 
     def save(self, path: Path | str | None = None) -> None:
         save_path = Path(path) if path is not None else self._config_path
-        OmegaConf.save(self._config._config, save_path)
+        OmegaConf.save(self._config._config, save_path)  # pyright: ignore[reportPrivateUsage]
 
     def __contains__(self, key: str) -> bool:
         return key in self._config

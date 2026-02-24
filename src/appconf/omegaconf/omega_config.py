@@ -10,7 +10,7 @@ class OmegaConfig:
         assert isinstance(config, (DictConfig, ListConfig)), (
             f"Config must be a DictConfig or ListConfig, got {type(config)}"
         )
-        self._config = config
+        self._config: RawOmegaConfConfig = config
 
     def get(self, key: str, default: Any = None) -> Any:
         return OmegaConf.select(self._config, key, default=default)
@@ -23,7 +23,7 @@ class OmegaConfig:
         return OmegaConf.select(self._config, key, default=MISSING) is not MISSING
 
     def set(self, key: str, value: Any) -> None:
-        def highlight_key(parts, highlight_idx):
+        def highlight_key(parts: list[str], highlight_idx: int):
             return ".".join(
                 [p if j != highlight_idx else f"**{p}**" for j, p in enumerate(parts)]
             )

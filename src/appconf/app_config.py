@@ -6,7 +6,7 @@ from omegaconf import ListConfig
 
 from .bind import Bind
 from .providers.argparse import ArgNamespaceProvider
-from .providers.base import BackingStore, DefaultedValue
+from .providers.base import BackingStore, ConfigProvider, DefaultedValue
 from .providers.omegaconf import OmegaConfProvider
 
 
@@ -23,8 +23,8 @@ class AppConfig:
         args: argparse.Namespace | None = None,
         bind_defaults: dict[str, Any] | None = None,
     ):
-        self._providers = []
-        self._bind_defaults = bind_defaults or {}
+        self._providers: list[ConfigProvider] = []
+        self._bind_defaults: dict[str, Any] = bind_defaults or {}
 
         if args is not None:
             self._providers.append(ArgNamespaceProvider(args))
@@ -44,7 +44,7 @@ class AppConfig:
     def save(self, path: Path | str | None = None) -> None:
         self._store.save(path)
 
-    def _resolve_bind(self, bind: Bind) -> Any:
+    def _resolve_bind(self, bind: Bind[Any]) -> Any:
         # Resolution order:
         #   1. Set-cache (handled by Bind.__get__ before we get here)
         #   2. Explicit arg value
@@ -53,8 +53,8 @@ class AppConfig:
         #   5. Bind default
         #   6. DefaultedValue (unwrapped)
         #   7. None
-        result = None
-        defaulted = None
+        result: Any = None
+        defaulted: DefaultedValue | None = None
 
         for provider in self._providers:
             key = provider.bind_key(bind)
@@ -65,17 +65,22 @@ class AppConfig:
             if value is None:
                 continue
 
-            if isinstance(value, DefaultedValue):
-                defaulted = defaulted or value.value
+            if isinstance(value, DefaultedValue) and defaulted is None:
+                defaulted = value
                 continue
 
-            if result is None:
-                result = value
-            elif bind.action == "append" and isinstance(result, list):
-                if isinstance(value, (list, ListConfig)):
-                    result.extend(value)
+            if bind.action == "append":
+                items: list[Any] = (
+                    list(value)  # pyright: ignore[reportUnknownArgumentType]
+                    if isinstance(value, (list, ListConfig))
+                    else [value]
+                )
+                if result is None:
+                    result = items
                 else:
-                    result.append(value)
+                    result.extend(items)
+            elif result is None:
+                result = value
 
         if result is None:
             result = (
@@ -88,15 +93,15 @@ class AppConfig:
             if bind.default is not None:
                 result = bind.default
             elif defaulted is not None:
-                result = defaulted
+                result = defaulted.value
 
         return self._convert(result, bind)
 
     @staticmethod
-    def _convert(value: Any, bind: Bind) -> Any:
+    def _convert(value: Any, bind: Bind[Any]) -> Any:
         if bind.converter is not None and value is not None:
             if isinstance(value, (list, ListConfig)):
-                return [bind.converter(v) for v in value]
+                return [bind.converter(v) for v in value]  # pyright: ignore[reportUnknownVariableType]
             return bind.converter(value)
         return value
 
@@ -115,7 +120,7 @@ class AppConfig:
             if name in cls.__dict__:
                 attr = cls.__dict__[name]
                 if isinstance(attr, Bind):
-                    attr.__set__(self, value)
+                    attr.__set__(self, value)  # pyright: ignore[reportUnknownMemberType]
                     return
                 break
 
@@ -123,7 +128,7 @@ class AppConfig:
         super().__setattr__(name, value)
 
     def _resolved_binds(self) -> dict[str, Any]:
-        binds: dict[str, Bind] = {}
+        binds: dict[str, Bind[Any]] = {}
         for klass in reversed(type(self).__mro__):
             for name, attr in klass.__dict__.items():
                 if isinstance(attr, Bind):
@@ -136,7 +141,7 @@ class AppConfig:
     def __repr__(self) -> str:
         parts = [f"{k}={v!r}" for k, v in self._resolved_binds().items()]
 
-        providers = []
+        providers: list[str] = []
         for p in self._providers:
             name = type(p).__name__
             if isinstance(p, BackingStore):

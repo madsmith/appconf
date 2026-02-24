@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-T = TypeVar("T")
+if TYPE_CHECKING:
+    from ..bind import Bind
 
 
-class DefaultedValue(Generic[T]):
+class DefaultedValue:
     """Wrapper that marks a default value so it can be distinguished
     from an explicitly-provided value during resolution.
 
@@ -13,9 +16,9 @@ class DefaultedValue(Generic[T]):
     consulting providers and only unwraps it as a last resort.
     """
 
-    value: T
+    value: Any
 
-    def __init__(self, value: T):
+    def __init__(self, value: Any):
         self.value = value
 
     def __str__(self) -> str:
@@ -29,6 +32,7 @@ class DefaultedValue(Generic[T]):
 class ConfigProvider(Protocol):
     """Protocol for config providers. Providers supply values by key."""
 
+    def bind_key(self, bind: Bind[Any]) -> str | None: ...
     def get(self, key: str) -> Any: ...
 
 

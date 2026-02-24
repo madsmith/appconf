@@ -1,10 +1,8 @@
 import argparse
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from ..bind import Bind
 from .base import ConfigProvider, DefaultedValue
-
-T = TypeVar("T")
 
 
 class ArgParseWrapper:
@@ -26,7 +24,7 @@ class ArgParseWrapper:
                 action.default = DefaultedValue(action.default)
 
 
-class ArgNamespaceProvider(ConfigProvider, Generic[T]):
+class ArgNamespaceProvider(ConfigProvider):
     """Config provider that reads from a pre-parsed argparse Namespace.
 
     Returns values as-is, including DefaultedValue wrappers. Resolution
@@ -38,7 +36,7 @@ class ArgNamespaceProvider(ConfigProvider, Generic[T]):
     def __init__(self, args: argparse.Namespace):
         self._args = args
 
-    def bind_key(self, bind: Bind[T]) -> str | None:
+    def bind_key(self, bind: Bind[Any]) -> str | None:
         return bind.arg_key
 
     def get(self, key: str) -> Any:
@@ -50,7 +48,7 @@ class ArgNamespaceProvider(ConfigProvider, Generic[T]):
         return None
 
 
-class ArgParseProvider(ArgNamespaceProvider[T]):
+class ArgParseProvider(ArgNamespaceProvider):
     """Config provider that takes an ArgumentParser, marks defaults, parses args."""
 
     def __init__(self, parser: argparse.ArgumentParser):

@@ -1,6 +1,15 @@
-from typing import Any, Callable, Generic, TypeVar
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, overload
 
 T = TypeVar("T")
+
+if TYPE_CHECKING:
+    from typing import Protocol
+
+    class _BindHost(Protocol):
+        def _resolve_bind(self, bind: Bind[Any]) -> Any: ...
+        def set(self, key: str, value: Any) -> None: ...
 
 
 class Bind(Generic[T]):
@@ -47,25 +56,30 @@ class Bind(Generic[T]):
         # pattern via _cache_attr on the instance to avoid preventing GC.
         self._cache_attr: str | None = None
 
-    def __set_name__(self, owner, name: str) -> None:
+    def __set_name__(self, owner: type, name: str) -> None:
         self.property_name = name
         self._cache_attr = f"_bind_cache_{name}"
         # Short hand, assume arg key is the same as property name if not specified
         if self.arg_key is None:
             self.arg_key = name
 
-    def __get__(self, instance, owner) -> T | None:
+    @overload
+    def __get__(self, instance: None, owner: type) -> Bind[T]: ...
+    @overload
+    def __get__(self, instance: _BindHost, owner: type) -> T | None: ...
+
+    def __get__(self, instance: _BindHost | None, owner: type) -> Bind[T] | T | None:
         if instance is None:
-            return self  # type: ignore[return-value]
+            return self
         # Check per-instance set-cache first
         if self._cache_attr is not None:
             try:
                 return object.__getattribute__(instance, self._cache_attr)
             except AttributeError:
                 pass
-        return instance._resolve_bind(self)
+        return instance._resolve_bind(self)  # pyright: ignore[reportPrivateUsage]
 
-    def __set__(self, instance, value) -> None:
+    def __set__(self, instance: _BindHost, value: T | None) -> None:
         instance.set(self.config_path, value)
         # Cache the value on the instance so the next __get__ returns it
         # immediately, bypassing provider resolution.
@@ -97,12 +111,17 @@ class BindDefault(Bind[T]):
             default=default,
         )
 
-    def __get__(self, instance, owner) -> T:
+    @overload
+    def __get__(self, instance: None, owner: type) -> BindDefault[T]: ...
+    @overload
+    def __get__(self, instance: _BindHost, owner: type) -> T: ...
+
+    def __get__(self, instance: _BindHost | None, owner: type) -> BindDefault[T] | T:
         if instance is None:
-            return self  # type: ignore[return-value]
+            return self
         if self._cache_attr is not None:
             try:
                 return object.__getattribute__(instance, self._cache_attr)
             except AttributeError:
                 pass
-        return instance._resolve_bind(self)
+        return instance._resolve_bind(self)  # pyright: ignore[reportPrivateUsage]

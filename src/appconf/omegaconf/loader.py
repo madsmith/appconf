@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 from .omega_config import OmegaConfig, RawOmegaConfConfig
 
@@ -32,8 +32,8 @@ class OmegaConfigLoader:
         OmegaConf.resolve(config)
 
         # Strip private section if present
-        if "private" in config:
-            del config["private"]  # type: ignore
+        if isinstance(config, DictConfig) and "private" in config:
+            del config["private"]
 
         return config
 
