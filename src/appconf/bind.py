@@ -76,9 +76,26 @@ class Bind(Generic[T]):
 class BindDefault(Bind[T]):
     """Bind variant whose __get__ returns T instead of T | None.
 
-    Use when a default is guaranteed (via Bind default, bind_defaults,
-    or YAML config) and you don't want None in the type signature.
+    Use when a default is guaranteed and you don't want None in the
+    type signature. Requires a default value.
     """
+
+    def __init__(
+        self,
+        config_path: str,
+        *,
+        default: T,
+        arg_key: str | None = None,
+        action: str | None = None,
+        converter: Callable[[Any], Any] | None = None,
+    ):
+        super().__init__(
+            config_path,
+            arg_key=arg_key,
+            action=action,
+            converter=converter,
+            default=default,
+        )
 
     def __get__(self, instance, owner) -> T:
         if instance is None:
