@@ -1,8 +1,10 @@
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+
+T = TypeVar("T")
 
 
-class DefaultedValue:
+class DefaultedValue(Generic[T]):
     """Wrapper that marks a default value so it can be distinguished
     from an explicitly-provided value during resolution.
 
@@ -11,7 +13,9 @@ class DefaultedValue:
     consulting providers and only unwraps it as a last resort.
     """
 
-    def __init__(self, value: Any):
+    value: T
+
+    def __init__(self, value: T):
         self.value = value
 
     def __str__(self) -> str:

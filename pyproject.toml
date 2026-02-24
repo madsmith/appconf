@@ -37,6 +37,12 @@ where = ["src"]
 [tool.setuptools.package-data]
 appconf = ["py.typed"]
 
+[tool.pyright]
+extraPaths = ["src"]
+reportAny = false
+reportExplicitAny = false
+reportImplicitOverride = false
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
