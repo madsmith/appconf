@@ -24,13 +24,15 @@ server:
 Define your config class:
 
 ```python
-from appconf import AppConfig, Bind
+from appconf import AppConfig, Bind, BindDefault
 
 class ServerConfig(AppConfig):
-    host = Bind[str]("server.host", default="0.0.0.0")
-    port = Bind[int]("server.port", converter=int, default=3000)
+    host = BindDefault[str]("server.host", default="0.0.0.0")
+    port = BindDefault[int]("server.port", converter=int, default=3000)
     debug = Bind[bool]("server.debug")
 ```
+
+`BindDefault` requires a `default` and narrows the return type to `T` instead of `T | None`, so type checkers know the value is never `None`. Use `Bind` when the property may legitimately be unset.
 
 And use it in your application:
 
@@ -84,7 +86,7 @@ Apply a converter to transform the resolved value. YAML values are often strings
 from pathlib import Path
 
 class MyConfig(AppConfig):
-    save_dir = Bind[Path]("app.save_dir", converter=Path)
+    save_dir = BindDefault[Path]("app.save_dir", default=Path("."), converter=Path)
     tags = Bind[list[str]]("tags", converter=str.upper)
 ```
 
