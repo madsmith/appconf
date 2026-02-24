@@ -1,4 +1,5 @@
 import argparse
+from typing import final
 
 from appconf import AppConfig, Bind, BindDefault
 from appconf.providers.base import DefaultedValue
@@ -7,8 +8,9 @@ from appconf.providers.base import DefaultedValue
 
 
 def test_bind_set_name():
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     bind = MyConfig.__dict__["port"]
     assert bind.property_name == "port"
@@ -16,16 +18,18 @@ def test_bind_set_name():
 
 
 def test_bind_explicit_arg_key():
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port", arg_key="server_port")
+        port = Bind[int]("server.port", arg_key="server_port")
 
     bind = MyConfig.__dict__["port"]
     assert bind.arg_key == "server_port"
 
 
 def test_bind_class_access_returns_descriptor():
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     assert isinstance(MyConfig.port, Bind)
 
@@ -36,8 +40,9 @@ def test_bind_set_writes_through_to_config_path(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace()
     cfg = MyConfig(config_file, args)
@@ -50,8 +55,9 @@ def test_bind_set_cache_overrides_arg_provider(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace(port=5000)
     cfg = MyConfig(config_file, args)
@@ -67,8 +73,9 @@ def test_resolve_argparse_wins(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace(port=9090)
     cfg = MyConfig(config_file, args)
@@ -79,8 +86,9 @@ def test_resolve_config_fallback(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace(port=None)
     cfg = MyConfig(config_file, args)
@@ -91,8 +99,9 @@ def test_resolve_bind_default(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port", default=3000)
+        port = Bind[int]("server.port", default=3000)
 
     args = argparse.Namespace(port=None)
     cfg = MyConfig(config_file, args)
@@ -103,8 +112,9 @@ def test_resolve_defaulted_value_fallback(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace(port=DefaultedValue(5000))
     cfg = MyConfig(config_file, args)
@@ -115,8 +125,9 @@ def test_resolve_bind_defaults_fallback(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace()
     cfg = MyConfig(config_file, args, bind_defaults={"port": 5000})
@@ -128,8 +139,9 @@ def test_resolve_bind_defaults_below_yaml(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace()
     cfg = MyConfig(config_file, args, bind_defaults={"port": 5000})
@@ -140,8 +152,9 @@ def test_resolve_none_when_nothing_matches(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     args = argparse.Namespace()
     cfg = MyConfig(config_file, args)
@@ -155,8 +168,9 @@ def test_resolve_with_converter(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: '8080'\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port", converter=int)
+        port = Bind[int]("server.port", converter=int)
 
     args = argparse.Namespace(port=None)
     cfg = MyConfig(config_file, args)
@@ -168,8 +182,9 @@ def test_resolve_converter_with_list(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("paths:\n  - '1'\n  - '2'\n  - '3'\n")
 
+    @final
     class MyConfig(AppConfig):
-        paths = Bind("paths", converter=int)
+        paths = Bind[list[int]]("paths", converter=int)
 
     args = argparse.Namespace(paths=None)
     cfg = MyConfig(config_file, args)
@@ -183,8 +198,9 @@ def test_resolve_append_merges(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("extra:\n  - from_config\n")
 
+    @final
     class MyConfig(AppConfig):
-        items = Bind("extra", arg_key="items", action="append")
+        items = Bind[list[str]]("extra", arg_key="items", action="append")
 
     args = argparse.Namespace(items=["from_arg"])
     cfg = MyConfig(config_file, args)
@@ -202,8 +218,9 @@ def test_non_bind_attr_is_normal_python_attr(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     cfg = MyConfig(config_file)
     cfg.local_value = 42
@@ -218,6 +235,7 @@ def test_bind_default_resolves_from_default(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  host: localhost\n")
 
+    @final
     class MyConfig(AppConfig):
         port = BindDefault[int]("server.port", default=3000)
 
@@ -229,6 +247,7 @@ def test_bind_default_resolves_from_yaml(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
         port = BindDefault[int]("server.port", default=3000)
 
@@ -240,6 +259,7 @@ def test_bind_default_set_cache(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
         port = BindDefault[int]("server.port", default=3000)
 
@@ -253,6 +273,7 @@ def test_bind_default_is_bind_subclass():
 
 
 def test_bind_default_class_access_returns_descriptor():
+    @final
     class MyConfig(AppConfig):
         port = BindDefault[int]("server.port", default=3000)
 

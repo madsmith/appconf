@@ -39,6 +39,7 @@ appconf = ["py.typed"]
 
 [tool.pyright]
 extraPaths = ["src"]
+exclude = ["tests/"]
 reportAny = false
 reportExplicitAny = false
 reportImplicitOverride = false

@@ -1,4 +1,5 @@
 import argparse
+from typing import final
 
 from appconf import (
     AppConfig,
@@ -136,8 +137,9 @@ def test_appconfig_no_args(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     cfg = MyConfig(config_file)
     assert cfg.port == 8080
@@ -150,8 +152,9 @@ def test_bind_write_through(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     cfg = MyConfig(config_file)
     cfg.port = 9090
@@ -165,8 +168,9 @@ def test_appconfig_save(tmp_path):
     config_file = tmp_path / "config.yaml"
     config_file.write_text("server:\n  port: 8080\n")
 
+    @final
     class MyConfig(AppConfig):
-        port = Bind("server.port")
+        port = Bind[int]("server.port")
 
     cfg = MyConfig(config_file)
     cfg.port = 9090
