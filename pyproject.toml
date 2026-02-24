@@ -44,7 +44,7 @@ reportAny = false
 reportExplicitAny = false
 reportImplicitOverride = false
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest>=8.0",
 ]
