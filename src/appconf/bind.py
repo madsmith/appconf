@@ -71,3 +71,21 @@ class Bind(Generic[T]):
         # immediately, bypassing provider resolution.
         if self._cache_attr is not None:
             object.__setattr__(instance, self._cache_attr, value)
+
+
+class BindDefault(Bind[T]):
+    """Bind variant whose __get__ returns T instead of T | None.
+
+    Use when a default is guaranteed (via Bind default, bind_defaults,
+    or YAML config) and you don't want None in the type signature.
+    """
+
+    def __get__(self, instance, owner) -> T:
+        if instance is None:
+            return self  # type: ignore[return-value]
+        if self._cache_attr is not None:
+            try:
+                return object.__getattribute__(instance, self._cache_attr)
+            except AttributeError:
+                pass
+        return instance._resolve_bind(self)

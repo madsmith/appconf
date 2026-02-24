@@ -1,6 +1,6 @@
 import argparse
 
-from appconf import AppConfig, Bind
+from appconf import AppConfig, Bind, BindDefault
 from appconf.providers.base import DefaultedValue
 
 # --- Bind descriptor ---
@@ -209,3 +209,51 @@ def test_non_bind_attr_is_normal_python_attr(tmp_path):
     cfg.local_value = 42
     assert cfg.local_value == 42  # type: ignore[assign]
     assert "local_value" in cfg.__dict__
+
+
+# --- BindDefault ---
+
+
+def test_bind_default_resolves_from_default(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  host: localhost\n")
+
+    class MyConfig(AppConfig):
+        port = BindDefault[int]("server.port", default=3000)
+
+    cfg = MyConfig(config_file)
+    assert cfg.port == 3000
+
+
+def test_bind_default_resolves_from_yaml(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  port: 8080\n")
+
+    class MyConfig(AppConfig):
+        port = BindDefault[int]("server.port", default=3000)
+
+    cfg = MyConfig(config_file)
+    assert cfg.port == 8080
+
+
+def test_bind_default_set_cache(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("server:\n  port: 8080\n")
+
+    class MyConfig(AppConfig):
+        port = BindDefault[int]("server.port", default=3000)
+
+    cfg = MyConfig(config_file)
+    cfg.port = 9090
+    assert cfg.port == 9090
+
+
+def test_bind_default_is_bind_subclass():
+    assert issubclass(BindDefault, Bind)
+
+
+def test_bind_default_class_access_returns_descriptor():
+    class MyConfig(AppConfig):
+        port = BindDefault[int]("server.port", default=3000)
+
+    assert isinstance(MyConfig.port, BindDefault)
