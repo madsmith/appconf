@@ -1,11 +1,11 @@
 """appconf - Typed application config with OmegaConf and argparse binding."""
 
-from .omegaconf import OmegaConfig, RawOmegaConfConfig, OmegaConfigLoader
+from .omegaconf import OmegaConfig, RawOmegaConfConfig, OmegaConfigLoader, PrivateConfigError
 from .bind import Bind, BindDefault
 from .app_config import AppConfig
 from .providers import ConfigProvider, BackingStore, DefaultedValue, ArgParseWrapper, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider
 
-__version__ = "1.2.2"
+__version__ = "1.3.0"
 
 __all__ = [
     "OmegaConfig",
@@ -21,4 +21,5 @@ __all__ = [
     "ArgNamespaceProvider",
     "ArgParseProvider",
     "OmegaConfProvider",
+    "PrivateConfigError",
 ]

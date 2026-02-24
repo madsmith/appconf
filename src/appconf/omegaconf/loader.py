@@ -1,8 +1,13 @@
+import re
 from pathlib import Path
 
 from omegaconf import DictConfig, OmegaConf
+from omegaconf.errors import InterpolationKeyError
 
+from .errors import PrivateConfigError
 from .omega_config import OmegaConfig, RawOmegaConfConfig
+
+_INTERPOLATION_KEY_RE = re.compile(r"Interpolation key '(.+?)' not found")
 
 
 class OmegaConfigLoader:
@@ -29,7 +34,16 @@ class OmegaConfigLoader:
             config = OmegaConf.merge(config, config_private)
 
         # Resolve all interpolations
-        OmegaConf.resolve(config)
+        try:
+            OmegaConf.resolve(config)
+        except InterpolationKeyError as exc:
+            match = _INTERPOLATION_KEY_RE.search(str(exc))
+            key = match.group(1) if match else None
+            if key and key.startswith("private."):
+                raise PrivateConfigError(
+                    key, config_file, private_file
+                ) from exc
+            raise
 
         # Strip private section if present
         if isinstance(config, DictConfig) and "private" in config:
