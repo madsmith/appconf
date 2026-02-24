@@ -1,8 +1,8 @@
 import argparse
 from typing import Any
 
-from .base import ConfigProvider, DefaultedValue
 from ..bind import Bind
+from .base import ConfigProvider, DefaultedValue
 
 
 class ArgParseWrapper:

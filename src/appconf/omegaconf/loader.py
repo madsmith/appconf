@@ -32,8 +32,8 @@ class OmegaConfigLoader:
         OmegaConf.resolve(config)
 
         # Strip private section if present
-        if 'private' in config:
-            del config['private']  # type: ignore
+        if "private" in config:
+            del config["private"]  # type: ignore
 
         return config
 

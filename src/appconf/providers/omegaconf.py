@@ -3,9 +3,9 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
-from .base import ConfigProvider
 from ..bind import Bind
-from ..omegaconf import OmegaConfigLoader, OmegaConfig
+from ..omegaconf import OmegaConfig, OmegaConfigLoader
+from .base import ConfigProvider
 
 
 class OmegaConfProvider(ConfigProvider):
