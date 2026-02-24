@@ -84,7 +84,7 @@ class BindDefault(Bind[T]):
         self,
         config_path: str,
         *,
-        default: T,
+        default: Any,
         arg_key: str | None = None,
         action: str | None = None,
         converter: Callable[[Any], Any] | None = None,
