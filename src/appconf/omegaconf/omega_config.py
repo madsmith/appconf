@@ -73,6 +73,9 @@ class OmegaConfig:
                 f'Config must be a DictConfig or ListConfig at "{highlighted}"'
             )
 
+    def items(self):
+        return self._config.items()
+
     def __getattr__(self, name: str) -> Any:
         if name.startswith("_"):
             raise AttributeError(name)

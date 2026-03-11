@@ -92,6 +92,36 @@ def test_contains_none_value():
     assert "key" in cfg
 
 
+# --- items ---
+
+
+def test_items_returns_top_level_keys(simple_config):
+    cfg = OmegaConfig(simple_config)
+    items = dict(cfg.items())
+    assert items["foo"] == "bar"
+    assert items["number"] == 42
+    assert "nested" in items
+
+
+def test_items_all_keys_present(simple_config):
+    cfg = OmegaConfig(simple_config)
+    keys = [k for k, _ in cfg.items()]
+    assert set(keys) == {"foo", "number", "nested"}
+
+
+def test_items_empty_config():
+    cfg = OmegaConfig(OmegaConf.create({}))
+    assert list(cfg.items()) == []
+
+
+def test_items_nested_value_is_dictconfig(simple_config):
+    cfg = OmegaConfig(simple_config)
+    items = dict(cfg.items())
+    # nested value is the raw DictConfig, not a wrapped OmegaConfig
+    assert items["nested"]["key1"] == "value1"
+    assert items["nested"]["key2"] == 123
+
+
 # --- __getattr__ / __setattr__ ---
 
 
@@ -205,7 +235,7 @@ def test_init_rejects_non_config():
     with pytest.raises(
         AssertionError, match="Config must be a DictConfig or ListConfig"
     ):
-        OmegaConfig({"foo": "bar"})
+        OmegaConfig({"foo": "bar"})  # type: ignore
 
 
 # --- OmegaConfigLoader ---
