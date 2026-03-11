@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, ItemsView
 
 from omegaconf import MISSING, DictConfig, ListConfig, OmegaConf
+from omegaconf.base import DictKeyType
 
 RawOmegaConfConfig = DictConfig | ListConfig
 
@@ -73,7 +74,7 @@ class OmegaConfig:
                 f'Config must be a DictConfig or ListConfig at "{highlighted}"'
             )
 
-    def items(self):
+    def items(self) -> ItemsView[DictKeyType, Any]:
         return self._config.items()
 
     def __getattr__(self, name: str) -> Any:

@@ -5,7 +5,7 @@ from .bind import Bind, BindDefault
 from .app_config import AppConfig
 from .providers import ConfigProvider, BackingStore, DefaultedValue, ArgParseWrapper, ArgNamespaceProvider, ArgParseProvider, OmegaConfProvider
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 __all__ = [
     "OmegaConfig",
